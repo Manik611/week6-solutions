@@ -1,0 +1,129 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+#define HASH_SIZE 1000  
+
+typedef struct Node {
+    int key;
+    int value;
+    struct Node* prev;
+    struct Node* next;
+} Node;
+
+typedef struct {
+    int capacity;
+    int count;
+    Node* head;
+    Node* tail;
+    Node* hash[HASH_SIZE];
+} LRUCache;
+
+int hashFunc(int key) {
+    return key % HASH_SIZE;
+}
+
+LRUCache* createCache(int capacity) {
+    LRUCache* cache = (LRUCache*)malloc(sizeof(LRUCache));
+    cache->capacity = capacity;
+    cache->count = 0;
+    cache->head = NULL;
+    cache->tail = NULL;
+    for (int i = 0; i < HASH_SIZE; i++) cache->hash[i] = NULL;
+    return cache;
+}
+
+void removeNode(LRUCache* cache, Node* node) {
+    if (!node) return;
+    if (node->prev) node->prev->next = node->next;
+    else cache->head = node->next; 
+    if (node->next) node->next->prev = node->prev;
+    else cache->tail = node->prev; 
+}
+
+void addToFront(LRUCache* cache, Node* node) {
+    node->next = cache->head;
+    node->prev = NULL;
+    if (cache->head) cache->head->prev = node;
+    cache->head = node;
+    if (!cache->tail) cache->tail = node;
+}
+
+int get(LRUCache* cache, int key) {
+    int h = hashFunc(key);
+    Node* node = cache->hash[h];
+    while (node) {
+        if (node->key == key) {
+            removeNode(cache, node);
+            addToFront(cache, node);
+            return node->value;
+        }
+        node = node->next;
+    }
+    return -1;  
+}
+
+void put(LRUCache* cache, int key, int value) {
+    int h = hashFunc(key);
+    Node* node = cache->hash[h];
+    Node* prevNode = NULL;
+    while (node) {
+        if (node->key == key) {
+            node->value = value; 
+            removeNode(cache, node);
+            addToFront(cache, node);
+            return;
+        }
+        prevNode = node;
+        node = node->next;
+    }
+    
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    newNode->key = key;
+    newNode->value = value;
+    newNode->prev = newNode->next = NULL;
+    
+    addToFront(cache, newNode);
+    
+    if (!cache->hash[h]) cache->hash[h] = newNode;
+    else {
+        Node* temp = cache->hash[h];
+        while (temp->next) temp = temp->next;
+        temp->next = newNode;
+    }
+    
+    cache->count++;
+    
+    if (cache->count > cache->capacity) {
+        int tailKey = cache->tail->key;
+        int th = hashFunc(tailKey);
+        Node* tnode = cache->hash[th];
+        Node* prev = NULL;
+        while (tnode) {
+            if (tnode->key == tailKey) {
+                if (prev) prev->next = tnode->next;
+                else cache->hash[th] = tnode->next;
+                break;
+            }
+            prev = tnode;
+            tnode = tnode->next;
+        }
+        Node* oldTail = cache->tail;
+        removeNode(cache, oldTail);
+        free(oldTail);
+        cache->count--;
+    }
+}
+int main() {
+    int cap = 2;
+    char queries[][10] = {"PUT", "GET"};
+    int keys[] = {1, 1};
+    int values[] = {2, -1};  
+    LRUCache* cache = createCache(cap);
+
+    put(cache, keys[0], values[0]);
+ 
+    int res = get(cache, keys[1]);
+    printf("%d\n", res);  
+
+    return 0;
+}
