@@ -1,0 +1,79 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX 100
+
+typedef struct {
+    int arr[MAX];
+    int front;
+    int rear;
+} Queue;
+
+void initQueue(Queue* q) {
+    q->front = 0;
+    q->rear = -1;
+}
+
+int isEmpty(Queue* q) {
+    return q->front > q->rear;
+}
+
+void enqueue(Queue* q, int x) {
+    q->arr[++q->rear] = x;
+}
+
+int dequeue(Queue* q) {
+    if (isEmpty(q)) return -1;
+    return q->arr[q->front++];
+}
+
+int size(Queue* q) {
+    return q->rear - q->front + 1;
+}
+
+void interleaveQueue(Queue* q) {
+    int n = size(q);
+    if (n % 2 != 0) return;  
+
+    int stack[MAX];
+    int top = -1;
+
+    int half = n / 2;
+
+    for (int i = 0; i < half; i++) {
+        stack[++top] = dequeue(q);
+    }
+    while (top >= 0) {
+        enqueue(q, stack[top--]);
+    }
+    for (int i = 0; i < half; i++) {
+        enqueue(q, dequeue(q));
+    }
+
+    for (int i = 0; i < half; i++) {
+        stack[++top] = dequeue(q);
+    }
+
+    while (top >= 0) {
+        enqueue(q, stack[top--]);   
+        enqueue(q, dequeue(q));      
+    }
+}
+int main() {
+    Queue q;
+    initQueue(&q);
+
+    int arr[] = {2, 4, 3, 1};
+    int n = 4;
+
+    for (int i = 0; i < n; i++) enqueue(&q, arr[i]);
+
+    interleaveQueue(&q);
+
+    while (!isEmpty(&q)) {
+        printf("%d ", dequeue(&q));
+    }
+    printf("\n");
+
+    return 0;
+}
